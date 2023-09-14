@@ -1,0 +1,44 @@
+---
+- name: Install webserver
+  hosts: intranet
+  become: true
+  tasks:
+    - name: Ensure latest package httpd and firewalld
+      ansible.builtin.yum:
+        name:
+          - httpd
+          - firewalld
+        state: latest
+
+    - name: Ensure enable and running service firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Permit traffic in default zone for http service
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: Start service httpd, if not started
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Copy index.html using inline content
+      ansible.builtin.copy:
+        content: 'Welcome to the example.com intranet!\n'
+        dest: /var/www/html/index.html
+
+- name: Test webserver
+  hosts: localhost
+  tasks:
+    - name: Test webserver to get success code
+      ansible.builtin.uri:
+        url: http://vm-11-node2-ansible.example.com
+        method: GET
+        status_code: 200
